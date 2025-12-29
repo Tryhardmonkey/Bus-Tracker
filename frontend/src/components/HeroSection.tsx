@@ -27,7 +27,7 @@ const HeroSection = () => {
           {/* Heading */}
           <h1 className="font-heading text-4xl md:text-6xl lg:text-7xl font-bold text-foreground mb-6 animate-slide-up" style={{ animationDelay: "0.1s" }}>
             Track Your Bus
-            <span className="block gradient-hero bg-clip-text text-transparent">In Real Time</span>
+            <span className="block gradient-text-hero bg-clip-text text-transparent">In Real Time</span>
           </h1>
 
           {/* Subtitle */}

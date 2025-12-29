@@ -116,6 +116,14 @@
     background: var(--gradient-hero);
   }
 
+  .gradient-text-hero {
+  background: linear-gradient(90deg, #6366f1, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+
   .gradient-card {
     background: var(--gradient-card);
   }

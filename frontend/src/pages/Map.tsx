@@ -4,6 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Fix for default marker icons in Leaflet with bundlers
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
 
 const buses = [
   { id: "42", route: "Downtown Express", lat: 40.7128, lng: -74.006, eta: "2 min" },
@@ -11,70 +22,118 @@ const buses = [
   { id: "7", route: "University Line", lat: 40.7282, lng: -73.7949, eta: "8 min" },
 ];
 
+// Custom bus icon
+const createBusIcon = (busId: string) => {
+  return L.divIcon({
+    className: "custom-bus-marker",
+    html: `
+      <div style="
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, hsl(142, 76%, 36%), hsl(142, 71%, 45%));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        cursor: pointer;
+        position: relative;
+      ">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 6v6"/>
+          <path d="M15 6v6"/>
+          <path d="M2 12h19.6"/>
+          <path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/>
+          <circle cx="7" cy="18" r="2"/>
+          <path d="M9 18h5"/>
+          <circle cx="16" cy="18" r="2"/>
+        </svg>
+      </div>
+      <div style="
+        position: absolute;
+        top: 52px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        padding: 4px 8px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      ">
+        Bus ${busId}
+      </div>
+    `,
+    iconSize: [48, 70],
+    iconAnchor: [24, 24],
+  });
+};
+
+// User location icon
+const userIcon = L.divIcon({
+  className: "custom-user-marker",
+  html: `
+    <div style="
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: hsl(221, 83%, 53%);
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    "></div>
+  `,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+});
+
 const Map = () => {
   const navigate = useNavigate();
   const [isInsideBus, setIsInsideBus] = useState(false);
 
+  const center: [number, number] = [40.735, -73.99];
+
   return (
     <div className="min-h-screen bg-background relative">
-      {/* Map Placeholder */}
-      <div className="absolute inset-0 bg-muted">
-        <div className="w-full h-full relative overflow-hidden">
-          {/* Grid Pattern */}
-          <div 
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: `
-                linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px),
-                linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)
-              `,
-              backgroundSize: '50px 50px'
-            }}
+      {/* Map Container */}
+      <div className="absolute inset-0">
+        <MapContainer
+          center={center}
+          zoom={11}
+          style={{ height: "100%", width: "100%" }}
+          zoomControl={false}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           
-          {/* Simulated Roads */}
-          <div className="absolute top-1/2 left-0 right-0 h-2 bg-foreground/10" />
-          <div className="absolute top-0 bottom-0 left-1/2 w-2 bg-foreground/10" />
-          <div className="absolute top-1/4 left-0 right-0 h-1 bg-foreground/5" />
-          <div className="absolute top-3/4 left-0 right-0 h-1 bg-foreground/5" />
-          <div className="absolute top-0 bottom-0 left-1/4 w-1 bg-foreground/5" />
-          <div className="absolute top-0 bottom-0 left-3/4 w-1 bg-foreground/5" />
-          
           {/* Bus Markers */}
-          {buses.map((bus, index) => (
-            <div
+          {buses.map((bus) => (
+            <Marker
               key={bus.id}
-              className="absolute animate-pulse-soft"
-              style={{
-                top: `${25 + index * 20}%`,
-                left: `${20 + index * 25}%`,
-              }}
+              position={[bus.lat, bus.lng]}
+              icon={createBusIcon(bus.id)}
             >
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full gradient-hero flex items-center justify-center shadow-elevated cursor-pointer hover:scale-110 transition-transform">
-                  <Bus className="w-6 h-6 text-primary-foreground" />
+              <Popup>
+                <div className="p-2">
+                  <h3 className="font-bold">Bus {bus.id}</h3>
+                  <p className="text-sm">{bus.route}</p>
+                  <p className="text-sm text-green-600 font-medium">ETA: {bus.eta}</p>
                 </div>
-                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-card px-2 py-1 rounded-lg shadow-card text-xs font-medium whitespace-nowrap">
-                  Bus {bus.id} • {bus.eta}
-                </div>
-              </div>
-            </div>
+              </Popup>
+            </Marker>
           ))}
           
-          {/* User Location */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-            <div className="relative">
-              <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shadow-lg">
-                <div className="w-3 h-3 rounded-full bg-secondary-foreground" />
-              </div>
-              <div className="absolute inset-0 rounded-full bg-secondary/30 animate-ping" />
-            </div>
-          </div>
-        </div>
+          {/* User Location Marker */}
+          <Marker position={center} icon={userIcon}>
+            <Popup>Your Location</Popup>
+          </Marker>
+        </MapContainer>
       </div>
 
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-10 p-4">
+      <header className="absolute top-0 left-0 right-0 z-[1000] p-4">
         <div className="flex items-center justify-between">
           <Button 
             variant="glass" 
@@ -97,7 +156,7 @@ const Map = () => {
       </header>
 
       {/* Bottom Panel */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 p-4">
+      <div className="absolute bottom-0 left-0 right-0 z-[1000] p-4">
         <div className="bg-card rounded-2xl shadow-elevated border border-border/50 p-4">
           {/* Inside Bus Toggle */}
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-xl mb-4">
@@ -124,7 +183,7 @@ const Map = () => {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-40 overflow-y-auto">
             {buses.map((bus) => (
               <div 
                 key={bus.id}
